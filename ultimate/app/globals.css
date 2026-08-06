@@ -1,0 +1,361 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Quantum Color System */
+  --quantum-primary: #0A0E1A;
+  --quantum-secondary: #1E3A5F;
+  --quantum-accent: #00E5FF;
+  --quantum-orange: #FF6B35;
+  --quantum-red: #FF2D55;
+  --quantum-green: #00FF9D;
+  --quantum-purple: #A855F7;
+  --quantum-pink: #FF69B4;
+  --quantum-gold: #FFD700;
+  --quantum-metal: #C0C0C0;
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-hover: rgba(255, 255, 255, 0.06);
+  --glass-blur: 30px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--quantum-accent) transparent;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--quantum-primary);
+  color: #ffffff;
+  overflow-x: hidden;
+  transition: background-color 0.5s ease, color 0.3s ease;
+}
+
+/* ===== QUANTUM BACKGROUND ===== */
+.quantum-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background: radial-gradient(circle at 20% 50%, rgba(0, 229, 255, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 80% 50%, rgba(255, 107, 53, 0.05) 0%, transparent 50%),
+              radial-gradient(circle at 50% 100%, rgba(168, 85, 247, 0.05) 0%, transparent 50%);
+  animation: quantumShift 20s ease-in-out infinite alternate;
+}
+
+@keyframes quantumShift {
+  0% { transform: scale(1) rotate(0deg); }
+  100% { transform: scale(1.2) rotate(5deg); }
+}
+
+/* ===== GLASS QUANTUM CARD ===== */
+.quantum-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quantum-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(45deg, transparent 0%, rgba(255, 255, 255, 0.03) 50%, transparent 100%);
+  transform: translateX(-100%);
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+.quantum-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  border-color: rgba(0, 229, 255, 0.3);
+  box-shadow: 0 20px 60px rgba(0, 229, 255, 0.1);
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ===== HOLOGRAPHIC TEXT ===== */
+.holographic {
+  background-image: linear-gradient(90deg, 
+    #00E5FF 0%, #FF6B35 25%, #A855F7 50%, 
+    #FF2D55 75%, #00E5FF 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradientShift 5s ease-in-out infinite;
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ===== HOLOGRAPHIC ELEMENT ===== */
+.holo-element {
+  position: relative;
+}
+
+.holo-element::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: inherit;
+  animation: holoPulse 3s ease-in-out infinite;
+}
+
+@keyframes holoPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(0, 229, 255, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(0, 229, 255, 0.5); }
+}
+
+/* ===== QUANTUM PARTICLE ===== */
+.quantum-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--quantum-accent);
+  pointer-events: none;
+}
+
+.quantum-particle::before,
+.quantum-particle::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: inherit;
+  animation: quantumEntangle 3s ease-in-out infinite;
+}
+
+.quantum-particle::before { animation-delay: 0.5s; }
+.quantum-particle::after { animation-delay: 1s; }
+
+@keyframes quantumEntangle {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(3); opacity: 0.1; }
+}
+
+/* ===== ENERGY BEAM ===== */
+.energy-beam {
+  position: relative;
+}
+
+.energy-beam::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 1px;
+  height: 100%;
+  background: linear-gradient(to bottom, transparent, var(--quantum-accent), transparent);
+  animation: energyFlow 3s linear infinite;
+}
+
+@keyframes energyFlow {
+  0% { transform: scaleY(0); opacity: 0; }
+  50% { transform: scaleY(1); opacity: 0.5; }
+  100% { transform: scaleY(3); opacity: 0; }
+}
+
+/* ===== FUTURISTIC SCROLLBAR ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--quantum-accent), var(--quantum-purple));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--quantum-accent), var(--quantum-orange));
+}
+
+/* ===== NEURAL INTERFACE ===== */
+.neural-interface {
+  position: fixed;
+  inset: 0;
+  z-index: -5;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.neural-interface svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== TERMINAL PROJECTION ===== */
+.terminal-projection {
+  font-family: 'JetBrains Mono', monospace;
+  position: relative;
+  background: rgba(10, 14, 26, 0.95);
+  border: 1px solid rgba(0, 255, 157, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 0 40px rgba(0, 255, 157, 0.1);
+  overflow: hidden;
+}
+
+.terminal-projection::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 255, 157, 0.1), transparent);
+  animation: terminalScan 4s linear infinite;
+}
+
+@keyframes terminalScan {
+  100% { left: 100%; }
+}
+
+/* ===== HOLOGRAM PROJECTOR ===== */
+.holo-projector {
+  position: relative;
+}
+
+.holo-projector img,
+.holo-projector canvas,
+.holo-projector .hologram-content {
+  animation: holoFloat 6s ease-in-out infinite;
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.holo-projector .hologram-content {
+  transform: rotateX(10deg) rotateY(-10deg) rotateZ(5deg);
+}
+
+@keyframes holoFloat {
+  0%, 100% { transform: translateY(0px) rotateX(0deg); }
+  50% { transform: translateY(-30px) rotateX(10deg); }
+}
+
+/* ===== QUANTUM CHAT UI ===== */
+.quantum-chat {
+  background: linear-gradient(135deg, 
+    rgba(10, 14, 26, 0.98) 0%, 
+    rgba(14, 22, 40, 0.98) 50%, 
+    rgba(10, 14, 26, 0.98) 100%);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(0, 229, 255, 0.15);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.quantum-chat .quantum-border {
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  animation: borderPulse 3s ease-in-out infinite;
+}
+
+@keyframes borderPulse {
+  0%, 100% { border-color: rgba(0, 229, 255, 0.2); }
+  50% { border-color: rgba(255, 107, 53, 0.4); }
+}
+
+/* ===== NEURAL VISUALIZATION ===== */
+.neural-viz {
+  position: relative;
+}
+
+.neural-viz .neuron {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--quantum-accent);
+  box-shadow: 0 0 10px currentColor;
+  animation: neuronPulse 1s ease-in-out infinite;
+}
+
+.neural-viz .neuron:nth-child(even) {
+  background: var(--quantum-orange);
+  animation-delay: 0.5s;
+}
+
+@keyframes neuronPulse {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.5); opacity: 1; }
+}
+
+/* ===== CARD 3D TILT ===== */
+.tilt-card {
+  transform-style: preserve-3d;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tilt-card:hover {
+  transform: rotateX(5deg) rotateY(5deg) scale(1.02);
+}
+
+.tilt-card .card-element {
+  transform-style: preserve-3d;
+}
+
+/* ===== GENERATIVE BACKGROUND ===== */
+.generative-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -8;
+  overflow: hidden;
+  opacity: 0.2;
+}
+
+.generative-bg .generative-layer {
+  position: absolute;
+  inset: -50%;
+  animation: generativeRotate 60s linear infinite;
+}
+
+@keyframes generativeRotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ===== SELECTION ===== */
+::selection {
+  background: var(--quantum-accent);
+  color: var(--quantum-primary);
+}
+
+/* ===== FOCUS ===== */
+:focus-visible {
+  outline: 2px solid var(--quantum-accent);
+  outline-offset: 2px;
+}
+
+/* ===== REDUCED MOTION ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
