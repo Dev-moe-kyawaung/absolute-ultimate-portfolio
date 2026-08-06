@@ -1,699 +1,1206 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Terminal as TerminalIcon, Command, Cpu, Database, Globe } from 'lucide-react';
+import { X, Terminal as TerminalIcon, Command, Cpu, Globe, Bot, Shield, Zap, Database, GitBranch, Cloud, Code2 } from 'lucide-react';
 
-interface TerminalProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
+// ============================================================
+// TYPE DEFINITIONS
+// ============================================================
 
 interface Command {
   name: string;
   description: string;
-  execute: () => string[];
+  usage?: string;
+  execute: (args: string[], ctx: TerminalContext) => string[];
 }
 
-interface AiCommand extends Command {
-  ai: boolean;
+interface TerminalContext {
+  print: (text: string) => void;
+  clear: () => void;
+  close: () => void;
+  setMatrixMode: (enabled: boolean) => void;
+  getHistory: () => string[];
+  setInput: (value: string) => void;
 }
 
-const commands: AiCommand[] = [
+// ============================================================
+// COMMAND DEFINITIONS
+// ============================================================
+
+const commands: Command[] = [
+  // Basic Commands
   {
     name: 'help',
-    description: 'List all available commands',
-    ai: false,
+    description: 'Display all available commands',
+    usage: 'help',
     execute: () => [
-      'Available commands for QUANTUM TERMINAL v4.0.0:',
       '',
-      '  help               - Display this help message',
-      '  about              - Display engineer information',
-      '  skills             - List technical skills',
-      '  projects           - Show project overview',
-      '  dna                - Show engineering DNA sequence',
-      '  architecture       - Display system architecture',
-      '  performance        - Show performance metrics',
-      '  security           - Display security protocols',
-      '  contact            - Show contact information',
-      '  clear              - Clear terminal',
-      '  whoami            - Display active session',
-      '  date               - Display current date/time',
-      '  uptime             - Display system uptime',
-      '  version            - Show version information',
-      '  ai:query <text>   - Ask the AI engine',
-      '  ai:analyze        - Analyze project structure',
-      '  ai:optimize       - Suggest performance optimizations',
-      '  ai:generate       - Generate code snippet',
-      '  neofetch          - Display system information',
-      '  matrix            - Enter The Matrix mode',
-      '  exit              - Close terminal',
-    ],
+      '╔══════════════════════════════════════════════════════╗',
+      '║            QUANTUM TERMINAL v4.0.0                  ║',
+      '║         Type "neofetch" for system info              ║',
+      '╚══════════════════════════════════════════════════════╝',
+      '',
+      ' BASIC COMMANDS:',
+      ' ┌─────────────────────────────────────────────┐',
+      ' │ help          Show this help message       │',
+      ' │ about         Display engineer info         │',
+      ' │ whoami        Show current user             │',
+      ' │ clear         Clear terminal                │',
+      ' │ exit          Close terminal                │',
+      ' │ date          Show current date/time        │',
+      ' │ neofetch      Display system information    │',
+      ' │ matrix        Enter The Matrix mode         │',
+      ' └─────────────────────────────────────────────┘',
+      '',
+      ' ENGINEERING COMMANDS:',
+      ' ┌─────────────────────────────────────────────┐',
+      ' │ skills        List technical skills         │',
+      ' │ projects      Show project overview         │',
+      ' │ dna           Show engineering DNA sequence │',
+      ' │ architecture  Display system architecture   │',
+      ' │ performance   Show performance metrics      │',
+      ' │ security      Display security protocols    │',
+      ' │ stack         Show full tech stack          │',
+      ' └─────────────────────────────────────────────┘',
+      '',
+      ' AI COMMANDS:',
+      ' ┌─────────────────────────────────────────────┐',
+      ' │ ai            Engage AI assistant           │',
+      ' │ ai:skills     AI analyzes skills            │',
+      ' │ ai:projects   AI recommends project         │',
+      ' │ ai:optimize   AI suggests optimizations     │',
+      ' └─────────────────────────────────────────────┘',
+      '',
+      ' NETWORK COMMANDS:',
+      ' ┌─────────────────────────────────────────────┐',
+      ' │ github        Open GitHub profile           │',
+      ' │ linkedin      Open LinkedIn profile         │',
+      ' │ email         Display contact email         │',
+      ' └─────────────────────────────────────────────┘',
+      '',
+      ' Type "help [command]" for more details on any command.',
+      '',
+    ];
   },
   {
-    name: 'dna',
-    description: 'Show DNA sequence',
-    ai: false,
-    execute: () => [
-      '═══ ENGINEERING DNA SEQUENCE ═══',
-      '',
-      'Chromosome 01: Kotlin Expertise [██████████████████░] 95%',
-      'Chromosome 02: Architecture [███████████████████▙] 98%',
-      'Chromosome 03: Machine Learning [█████████████████░] 92%',
-      'Chromosome 04: Security [███████████████▍▍▍] 88%',
-      'Chromosome 05: Performance [██████████████████▍] 94%',
-      '',
-      'Genetic markers: COROUTINE_AWARE, COMPOSE_NATIVE, ASYNC_MASTER',
-      'Mutation: SUPER_ARCHITECT',
-    ],
+    name: 'help',
+    description: 'Display commands',
+    usage: 'help [command]',
+    execute: (args) => {
+      if (args[0]) {
+        const cmd = commands.find((c) => c.name === args[0]);
+        if (cmd) {
+          return [
+            `COMMAND: ${cmd.name}`,
+            `DESCRIPTION: ${cmd.description}`,
+            `USAGE: ${cmd.usage}`,
+          ];
+        }
+        return [`Command not found: ${args[0]}`];
+      }
+      return [];
+    },
   },
   {
-    name: 'ai:query',
-    description: 'Query the AI engine',
-    ai: true,
-    execute: () => ['AI Engine active. Please provide a specific query.'],
+    name: 'about',
+    description: 'Display information about the engineer',
+    usage: 'about',
+    execute: () => [
+      '',
+      '╔═════════════════════════════════════════════╗',
+      '║       ENGINEER PROFILE — MOE KYAW AUNG      ║',
+      '╚═════════════════════════════════════════════╝',
+      '',
+      ' ▸ Name: Moe Kyaw Aung',
+      ' ▸ Role: Senior Android Engineer',
+      ' ▸ Status: OPEN TO OPPORTUNITIES 🟢',
+      ' ▸ Location: Tachileik, MM ↔ Bangkok, TH',
+      ' ▸ Experience: 3+ Years',
+      ' ▸ Certifications: 82+ (Programming Hub)',
+      '',
+      ' SPECIALIZATIONS:',
+      '  ├─ Mobile Development (Kotlin, Compose)',
+      '  ├─ Clean Architecture (MVVM, MVI)',
+      '  ├─ Backend & Cloud (Firebase, REST)',
+      '  ├─ AI/ML Integration (TFLite, Claude API)',
+      '  └─ Security (Ethical Hacking, OWASP)',
+      '',
+      ' ▸ Current Focus: Building AI-powered mobile apps',
+      ' ▸ Philosophy: "Code with precision. Build with purpose."',
+      '',
+    ];
+  },
+  {
+    name: 'whoami',
+    description: 'Display current user',
+    usage: 'whoami',
+    execute: () => [
+      'engineer@quantum-system',
+      'Role: Senior Android Engineer',
+      'Clearance: PRODUCTION_READY',
+      'Team: Mobile Innovation Lab',
+    ];
+  },
+  {
+    name: 'clear',
+    description: 'Clear the terminal screen',
+    usage: 'clear',
+    execute: () => [],
+  },
+  {
+    name: 'exit',
+    description: 'Close the terminal',
+    usage: 'exit',
+    execute: (_args, ctx) => {
+      ctx.close();
+      return ['Terminal session terminated.'];
+    },
+  },
+  {
+    name: 'date',
+    description: 'Display current date and time',
+    usage: 'date',
+    execute: () => {
+      const now = new Date();
+      return [
+        `Current date: ${now.toLocaleDateString('en-US', {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })}`,
+        `Current time: ${now.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          timeZoneName: 'short',
+        })}`,
+        `Timezone: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`,
+      ];
+    },
+  },
+  {
+    name: 'neofetch',
+    description: 'Display system information in style',
+    usage: 'neofetch',
+    execute: () => [
+      '        ▄▄▄▄▄▄▄▄▄▄▄  engineer@quantum-system',
+      '      ▄█████████████▄  -------------------------',
+      '     ▄████████████████▄  OS: QuantumOS 4.0',
+      '    ▄███████████████████▄  Host: Moe-Kyaw-Aung-MBP',
+      '   ██████████████████████  Kernel: 4.0.0-ultimate',
+      '   ██████████████████████  Uptime: 3 years 2 months',
+      '   ██████████████████████  Shell: Quantum Terminal',
+      '   ██████████████████████  Resolution: 2560x1440',
+      '   ██████████████████████  DE: Compose Desktop',
+      '   ██████████████████████  WM: QuantumWM',
+      '    ▀██████████████████▀  WM Theme: Quantum Dark',
+      '     ▀████████████████▀   Icons: Blueprint',
+      '       ▀████████████▀     Terminal: QuantumTerm',
+      '          ▀██████▀        CPU: Kotlin Compiler',
+      '            ▀▀▀▀         GPU: Compose Renderer',
+      '',
+      '    ╭──────────────────────────╮',
+      '    │ ENGINEER STATUS: ACTIVE  │',
+      '    │ LOCATION: TACHILEIK, MM  │',
+      '    │ AVAILABILITY: IMMEDIATE  │',
+      '    ╰──────────────────────────╯',
+    ];
   },
   {
     name: 'matrix',
-    description: 'Enter matrix mode',
-    ai: false,
+    description: 'Enter The Matrix mode',
+    usage: 'matrix',
+    execute: (_args, ctx) => {
+      ctx.setMatrixMode(true);
+      return [
+        'Wake up, Neo...',
+        'The Matrix has you.',
+        'Follow the white rabbit.',
+        'Knock, knock, Neo.',
+        '',
+        'Rendering matrix mode...',
+        '▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓',
+        'Matrix mode activated. Enjoy the rain.',
+      ];
+    },
+  },
+  // Engineering Commands
+  {
+    name: 'skills',
+    description: 'Display technical skills with proficiency',
+    usage: 'skills [category]',
+    execute: (args) => {
+      if (args[0] === 'mobile') {
+        return [
+          'MOBILE DEVELOPMENT SKILLS:',
+          '',
+          ' Kotlin             ████████████████████ 95%',
+          ' Jetpack Compose    ██████████████████░░ 92%',
+          ' Android SDK        ██████████████████░░ 90%',
+          ' Material 3         █████████████████░░░ 88%',
+          ' Room DB            █████████████████░░░ 86%',
+          ' Navigation         █████████████████░░░ 85%',
+          ''
+        ];
+      }
+      if (args[0] === 'architecture') {
+        return [
+          'ARCHITECTURE SKILLS:',
+          '',
+          ' Clean Architecture  ████████████████████ 98%',
+          ' MVVM Pattern        ███████████████████░ 95%',
+          ' MVI Pattern         █████████████████░░░ 93%',
+          ' Multi-module        ████████████████░░░░ 90%',
+          ' SOLID Principles    ██████████████████░░ 92%',
+          ' Design Patterns     █████████████████░░░ 89%',
+          ''
+        ];
+      }
+      if (args[0] === 'all') {
+        return [
+          'FULL TECHNICAL SKILLS MATRIX:',
+          '',
+          ' LANGUAGES:',
+          '  Kotlin ████████████████████ 95%',
+          '  Java   ████████████████░░░░ 80%',
+          '  Python ████████████████░░░░ 78%',
+          '  JS/TS  ██████████████░░░░░░ 75%',
+          '',
+          ' MOBILE:',
+          '  Compose ██████████████████░░ 92%',
+          '  Flutter ██████████████░░░░░░ 70%',
+          '  Swift   ████████████░░░░░░░░ 65%',
+          '',
+          ' BACKEND:',
+          '  Firebase ██████████████████░░ 92%',
+          '  REST     ██████████████████░░ 90%',
+          '  GraphQL  ███████████████░░░░░ 82%',
+          '',
+          ' AI/ML:',
+          '  TFLite   ████████████████░░░░ 85%',
+          '  ML Kit   ██████████████░░░░░░ 78%',
+          '  Claude   ████████████████░░░░ 84%',
+          '',
+          ' TOOLS:',
+          '  Git   ████████████████████░ 94%',
+          '  Docker ████████████████░░░░ 86%',
+          '  CI/CD  █████████████████░░░ 88%',
+          ''
+        ];
+      }
+      return [
+        'SKILLS CATEGORIES:',
+        '  skills mobile        — Mobile dev skills',
+        '  skills architecture  — Architecture skills',
+        '  skills all           — Full skill matrix',
+        '  skills ai            — AI/ML skills',
+        '  skills security      — Security skills',
+      ];
+    },
+  },
+  {
+    name: 'projects',
+    description: 'Display project overview',
+    usage: 'projects',
     execute: () => [
-      'WAKE UP, ENGINEER...',
-      'The Matrix has you. Welcome to the real world.',
-      'Follow the blue code, never the green.',
-      'Rendering matrix rain...',
-    ],
+      '',
+      '╔═══════════════════════════════════════════════╗',
+      '║              PROJECT REGISTRY v2               ║',
+      '╚═══════════════════════════════════════════════╝',
+      '',
+      ' ┌────────────────────────────────────────────┐',
+      ' │  PROJECT ID: PULSE_SYNC                    │',
+      ' │  STATUS: ● PRODUCTION                      │',
+      ' │  TYPE: Android Enterprise App              │',
+      ' │  STACK: Kotlin · Compose · Firebase        │',
+      ' │  VERSION: v3.2.0                           │',
+      ' │  ───────────────────────────────────────   │',
+      ' │  ▸ Real-time sync platform                 │',
+      ' │  ▸ Offline-first architecture              │',
+      ' │  ▸ 25K+ active users                       │',
+      ' │  ▸ <35ms response time                     │',
+      ' └────────────────────────────────────────────┘',
+      '',
+      ' ┌────────────────────────────────────────────┐',
+      ' │  PROJECT ID: MOEKYAW_TRANSLATOR           │',
+      ' │  STATUS: ◉ BETA                            │',
+      ' │  TYPE: Mobile AI Application               │',
+      ' │  STACK: Kotlin · TFLite · Claude API       │',
+      ' │  VERSION: v2.1.0                           │',
+      ' │  ───────────────────────────────────────   │',
+      ' │  ▸ AI-powered translation                  │',
+      ' │  ▸ 50+ languages supported                 │',
+      ' │  ▸ On-device ML inference                  │',
+      ' │  ▸ 97% accuracy                            │',
+      ' └────────────────────────────────────────────┘',
+      '',
+      ' ┌────────────────────────────────────────────┐',
+      ' │  PROJECT ID: QUANTUM_LAB                   │',
+      ' │  STATUS: ● LIVE                            │',
+      ' │  TYPE: Developer Tool                      │',
+      ' │  STACK: Next.js · WebGL · Paper.js         │',
+      ' │  VERSION: v1.0.0                           │',
+      ' │  ───────────────────────────────────────   │',
+      ' │  ▸ Auto-blueprint generator                │',
+      ' │  ▸ AI architecture analysis                │',
+      ' │  ▸ 10K+ diagrams generated                 │',
+      ' │  ▸ 94% accuracy                            │',
+      ' └────────────────────────────────────────────┘',
+      '',
+    ];
+  },
+  {
+    name: 'dna',
+    description: 'Display engineering DNA sequence',
+    usage: 'dna',
+    execute: () => [
+      '',
+      '╔═══════════════════════════════════════════════╗',
+      '║        ENGINEERING DNA SEQUENCING              ║',
+      '╚═══════════════════════════════════════════════╝',
+      '',
+      ' GENETIC MARKERS:',
+      ' ┌─────────────────────────────────────────────┐',
+      ' │  Chromosome 01 │ Kotlin Expertise   95%    │',
+      ' │  Chromosome 02 │ Architecture      98%    │',
+      ' │  Chromosome 03 │ ML Integration     92%    │',
+      ' │  Chromosome 04 │ Security           88%    │',
+      ' │  Chromosome 05 │ Performance       94%    │',
+      ' │  Chromosome 06 │ Cloud/Firebase     90%    │',
+      ' └─────────────────────────────────────────────┘',
+      '',
+      ' DNA SEQUENCE:',
+      ' ATCGATCGATCG ATCGATCG ATCGATCG',
+      ' TACGATCG ATCGATCG ATCGATC GATCGA',
+      ' CGATCG ATCGAT ATCGAT C GA TACG',
+      '',
+      ' MUTATIONS:',
+      ' ├─ COROUTINE_AWARE — Enhanced async processing',
+      ' ├─ COMPOSE_NATIVE — Deep UI Framework mastery',
+      ' ├─ ARCHITECT_SAVVY — System design expertise',
+      ' └─ AI_INTEGRATOR — Neural network integration',
+      '',
+      ' GENETIC STRENGTH SCORE: 94.7%',
+      ' ENGINEER FITNESS: EXCELLENT',
+      '',
+    ];
+  },
+  {
+    name: 'architecture',
+    description: 'Display system architecture blueprint',
+    usage: 'architecture',
+    execute: () => [
+      '',
+      '╔═══════════════════════════════════════════════╗',
+      '║        SYSTEM ARCHITECTURE BLUEPRINT           ║',
+      '╚═══════════════════════════════════════════════╝',
+      '',
+      ' CLEAN ARCHITECTURE LAYERS:',
+      '',
+      ' ┌─────────────────────────────────────────────┐',
+      ' │              PRESENTATION LAYER             │',
+      ' │         Compose UI · Screens · State        │',
+      ' │          (Jetpack Compose + MVI)            │',
+      ' └────────────────────┬────────────────────────┘',
+      '                      │ observe()',
+      ' ┌────────────────────▼────────────────────────┐',
+      ' │              VIEWMODEL LAYER                │',
+      ' │       State Holder · Events · StateFlow     │',
+      ' │          (Android ViewModel)                │',
+      ' └────────────────────┬────────────────────────┘',
+      '                      │ execute()',
+      ' ┌────────────────────▼────────────────────────┐',
+      ' │               DOMAIN LAYER                  │',
+      ' │       Use Cases · Business Logic · Rules    │',
+      ' │          (Kotlin + Coroutines)              │',
+      ' └────────────────────┬────────────────────────┘',
+      '                      │ getData()',
+      ' ┌────────────────────▼────────────────────────┐',
+      ' │               DATA LAYER                    │',
+      ' │    Repository · Data Sources · Mappers      │',
+      ' │    (Room · Retrofit · Firebase)             │',
+      ' └─────────────────────────────────────────────┘',
+      '',
+      ' PATTERN: Clean Architecture + MVVM',
+      ' MODULES: 18 features + 3 core modules',
+      ' DI: Hilt (Dagger) for dependency injection',
+      ' ASYNC: Coroutines + Flow',
+      ' TESTING: Unit (96%) + UI (89%) + E2E (78%)',
+      '',
+      ' DEPENDENCY RULES:',
+      '  ┌→ Presentation → Domain ← Data ┐',
+      '  │        └──────┬────────┘      │',
+      '  └───────────────┘               │',
+      '  Core module provides DI & Utils  │',
+      '  ─────────────────────────────────┘',
+      '',
+    ];
+  },
+  {
+    name: 'performance',
+    description: 'Display performance metrics',
+    usage: 'performance',
+    execute: () => [
+      '',
+      '╔═══════════════════════════════════════════════╗',
+      '║            PERFORMANCE METRICS                ║',
+      '╚═══════════════════════════════════════════════╝',
+      '',
+      ' APP PERFORMANCE:',
+      ' ├─ Cold Start: 0.42s [TARGET: <0.5s] ✓',
+      ' ├─ Warm Start: 0.18s [TARGET: <0.2s] ✓',
+      ' ├─ Hot Start: 0.05s [EXCELLENT] ✓',
+      ' ├─ Frame Rate: 60 FPS [STABLE] ✓',
+      ' ├─ Jank Rate: 0.01% [TARGET: <0.5%] ✓',
+      ' └─ Memory Usage: 45MB [OPTIMAL] ✓',
+      '',
+      ' BUILD PERFORMANCE:',
+      ' ├─ Build Time: 12.4s [PARALLEL] ✓',
+      ' ├─ APK Size: 8.2MB [R8 MINIFIED] ✓',
+      ' ├─ Test Time: 2.1s [RUNS CONCURRENT] ✓',
+      ' └─ Lint Time: 0.8s [FAST] ✓',
+      '',
+      ' QA METRICS:',
+      ' ├─ Test Coverage: 96% [TARGET: >90%] ✓',
+      ' ├─ Pass Rate: 99.9% [EXCELLENT] ✓',
+      ' ├─ Crash Rate: <0.1% [TARGET: <1%] ✓',
+      ' └─ ANR Rate: 0.001% [PERFECT] ✓',
+      '',
+      ' INFRASTRUCTURE:',
+      ' ├─ CDN Cache Hit: 94% [HIGH] ✓',
+      ' ├─ API Response: <45ms [LATENCY: LOW] ✓',
+      ' ├─ Uptime: 99.99% [SLA: INDUSTRY LEADING] ✓',
+      ' └─ Edge Computing: ENABLED [GLOBAL] ✓',
+      '',
+      ' ════════════ ALL TARGETS EXCEEDED ════════════',
+      '',
+    ];
+  },
+  {
+    name: 'security',
+    description: 'Display security protocols',
+    usage: 'security',
+    execute: () => [
+      '',
+      '╔═══════════════════════════════════════════════╗',
+      '║              SECURITY PROTOCOLS                ║',
+      '╚═══════════════════════════════════════════════╝',
+      '',
+      ' APP SECURITY:',
+      ' ├─ OWASP Mobile Top 10 Compliance: ✅ PASS',
+      ' ├─ Code Obfuscation: ✅ PROGUARD/R8 ENABLED',
+      ' ├─ SSL Pinning: ✅ OKHTTP IMPLEMENTED',
+      ' ├─ Encryption: ✅ AES-256-GCM',
+      ' ├─ Secure Storage: ✅ KEYSTORE + BIOMETRIC',
+      ' ├─ Network Security: ✅ HTTPS ONLY',
+      ' └─ Dependency Scanning: ✅ VERIFIED CLEAN',
+      '',
+      ' BACKEND SECURITY:',
+      ' ├─ Authentication: ✅ FIREBASE AUTH',
+      ' ├─ Authorization: ✅ RULE-BASED ACCESS',
+      ' ├─ Rate Limiting: ✅ IMPLEMENTED',
+      ' ├─ CORS Policy: ✅ RESTRICTIVE',
+      ' ├─ Input Validation: ✅ SERVER + CLIENT',
+      ' └─ WAF: ✅ CLOUDFLARE ENABLED',
+      '',
+      ' DEVOPS SECURITY:',
+      ' ├─ CI/CD: ✅ SECURED PIPELINE',
+      ' ├─ Secrets: ✅ VAULT MANAGED',
+      ' ├─ Docker Scanning: ✅ CLEAN',
+      ' ├─ Code Review: ✅ REQUIRED FOR ALL PRs',
+      ' └─ Monitoring: ✅ ALERTS CONFIGURED',
+      '',
+      ' ════════════ STATUS: ALL SYSTEMS PROTECTED ════════════',
+      '',
+    ];
+  },
+  {
+    name: 'stack',
+    description: 'Display full technology stack',
+    usage: 'stack',
+    execute: () => [
+      '',
+      '╔═══════════════════════════════════════════════╗',
+      '║               TECHNOLOGY STACK                 ║',
+      '╚═══════════════════════════════════════════════╝',
+      '',
+      ' FRONTEND FRAMEWORKS:',
+      ' ├─ Next.js 14 (App Router)',
+      ' ├─ React 18 (Concurrent Mode)',
+      ' ├─ TypeScript (Strict Mode)',
+      ' └─ Tailwind CSS',
+      '',
+      ' MOBILE DEVELOPMENT:',
+      ' ├─ Kotlin 2.0 (Coroutines, Flow, KMP)',
+      ' ├─ Jetpack Compose (Material 3)',
+      ' ├─ Jetpack (Navigation, Room, Paging)',
+      ' └─ Multi-module Architecture',
+      '',
+      ' AI & MACHINE LEARNING:',
+      ' ├─ TensorFlow Lite (On-device ML)',
+      ' ├─ ML Kit (Vision, NLP, Translation)',
+      ' ├─ Claude API (LLM Integration)',
+      ' └─ Neural Networks (Brain.js)',
+      '',
+      ' BACKEND & CLOUD:',
+      ' ├─ Firebase (Auth, Firestore, Functions)',
+      ' ├─ Node.js (Serverless)',
+      ' ├─ REST APIs (Retrofit, OkHttp)',
+      ' └─ GraphQL (Apollo)',
+      '',
+      ' DEVOPS & TOOLS:',
+      ' ├─ GitHub Actions (CI/CD)',
+      ' ├─ Docker (Containerization)',
+      ' ├─ Git (Version Control)',
+      ' └─ Cloudflare (CDN + Security)',
+      '',
+      ' 3D & VISUALIZATION:',
+      ' ├─ Three.js / WebGL',
+      ' ├─ Paper.js (Blueprint Generation)',
+      ' ├─ SVG / Canvas',
+      ' └─ Framer Motion (Animations)',
+      '',
+    ];
+  },
+  // AI Commands
+  {
+    name: 'ai',
+    description: 'Engage AI assistant',
+    usage: 'ai <topic>',
+    execute: (args) => {
+      const topics: Record<string, string[]> = {
+        default: [
+          '🤖 Neural AI Core Online.',
+          '',
+          'I can help you understand:',
+          ' ▸ Architecture decisions',
+          ' ▸ Code best practices',
+          ' ▸ Project recommendations',
+          ' ▸ Performance optimization',
+          ' ▸ Security considerations',
+          '',
+          'Try: ai architecture, ai kotlin, ai optimize',
+        ],
+        architecture: [
+          '🤖 ARCHITECTURE ANALYSIS:',
+          '',
+          ' Based on market trends and best practices:',
+          ' ✓ Clean Architecture is ideal for enterprise apps',
+          ' ✓ MVVM + MVI hybrid provides best reactivity',
+          ' ✓ Modularization reduces build times by 40%',
+          '',
+          ' RECOMMENDATION:',
+          ' For your next project, consider Event-Sourcing CQRS',
+          ' for high-throughput applications.',
+          '',
+          ' KEY PRINCIPLES:',
+          ' ▸ Single Responsibility',
+          ' ▸ Open/Closed Principle',
+          ' ▸ Dependency Inversion',
+          ' ▸ Interface Segregation',
+          '',
+        ],
+        kotlin: [
+          '🤖 KOTLIN BEST PRACTICES:',
+          '',
+          ' ✓ Use sealed classes for state management',
+          ' ✓ Leverage coroutines for async operations',
+          ' ✓ Prefer Flow over LiveData for reactive streams',
+          ' ✓ Use inline classes for type-safe wrappers',
+          '',
+          ' NUMBER ONE TIP:',
+          ' Use Kotlin Flow with StateFlow for',
+          ' predictable and testable state management.',
+          '',
+          ' Performance Point:',
+          ' Use @Immutable annotation for data classes',
+          ' in Compose to avoid unnecessary re-composition.',
+          '',
+        ],
+        optimize: [
+          '🤖 PERFORMANCE OPTIMIZATION STRATEGIES:',
+          '',
+          ' IMMEDIATE IMPROVEMENTS:',
+          ' ✓ Enable Baseline Profiles (saves 30% startup)',
+          ' ✓ Implement lazy loading for screens',
+          ' ✓ Use rememberSaveable for state preservation',
+          '',
+          ' LONG-TERM STRATEGIES:',
+          ' ✓ Shard database for faster queries',
+          ' ✓ Implement edge caching',
+          ' ✓ Use predictive back navigation',
+          '',
+          ' MEASUREMENT:',
+          ' Use Macrobenchmark for reliable metrics.',
+          ' Track: coldStart, frameDuration, memoryUsage.',
+          '',
+        ],
+        security: [
+          '🤖 SECURITY BEST PRACTICES:',
+          '',
+          ' ✓ Implement SSL pinning to prevent MITM attacks',
+          ' ✓ Use RSA key encryption for sensitive data',
+          ' ✓ Apply OWASP Mobile Top 10 checklist',
+          '',
+          ' CRITICAL:',
+          ' Never store secrets in SharedPreferences.',
+          ' Use Android Keystore + EncryptedSharedPreferences.',
+          '',
+          ' ✓ Enable Firebase App Check for backend security',
+          ' ✓ Implement certificate transparency',
+          ' ✓ Regular security audits',
+          '',
+        ],
+      };
+
+      const key = args[0]?.toLowerCase() || 'default';
+      return topics[key] || topics.default;
+    },
+  },
+  {
+    name: 'ai:skills',
+    description: 'AI analyzes skill gaps',
+    usage: 'ai:skills',
+    execute: () => [
+      '🤖 AI SKILL ANALYSIS COMPLETE:',
+      '',
+      ' CURRENT ASSESSMENT:',
+      ' ✓ Kotlin — Expert Level (Top 5%)',
+      ' ✓ Compose — Advanced (Top 10%)',
+      ' ✓ Architecture — Expert Level (Top 3%)',
+      ' ✓ Security — Advanced Intermediate',
+      '',
+      ' IDENTIFIED GROWTH AREAS:',
+      ' ▸ Compose Multiplatform (iOS)',
+      ' ▸ Advanced KSP / KAPT',
+      ' ▸ Server-Side Kotlin (Ktor)',
+      '',
+      ' SUGGESTED LEARNING PATH:',
+      ' Month 1: Compose Multiplatform basics',
+      ' Month 2: Ktor + SQLDelight',
+      ' Month 3: Advanced Kotlin DSL design',
+      '',
+      ' PROJECTED MASTERY: 8/10 within 6 months',
+    ];
+  },
+  {
+    name: 'ai:projects',
+    description: 'AI recommends next project',
+    usage: 'ai:projects',
+    execute: () => [
+      '🤖 PROJECT RECOMMENDATION ENGINE:',
+      '',
+      ' BASED ON:',
+      ' ✓ Market demand: HIGH for AI apps',
+      ' ✓ Skill alignment: 92% match',
+      ' ✓ Trending: Edge AI solutions',
+      '',
+      ' RECOMMENDED PROJECTS:',
+      '',
+      ' 1. ⭐ RECOMMENDED:',
+      '    NAME: "AI-Powered Offline TransLator Pro"',
+      '    VALUE: High — 5B+ language users globally',
+      '    EFFORT: Medium — 2 months',
+      '    IMPACT: Creates market-ready product',
+      '',
+      ' 2. ADDITIONAL OPTION:',
+      '    NAME: "Smart Home Automation Engineer"',
+      '    VALUE: Emerging — IoT growing 25%/year',
+      '    EFFORT: High — 4 months',
+      '    IMPACT: Positions as IoT specialist',
+      '',
+      ' FINAL VERDICT:',
+      ' Pursue Translation Pro to leverage ML skills',
+      ' with immediate market applications.',
+      '',
+    ];
+  },
+  {
+    name: 'ai:optimize',
+    description: 'AI suggests optimizations',
+    usage: 'ai:optimize',
+    execute: () => [
+      '🤖 AI CODE OPTIMIZATION REPORT:',
+      '',
+      ' ANALYZING PATTERNS:',
+      ' ✓ Code organization: CLEAN ✓',
+      ' ✓ Function composition: GOOD ✓',
+      ' ✓ State management: OPTIMAL ✓',
+      ' ✓ Resource usage: EFFICIENT ✓',
+      ' ⚠ Concurrency: CAN IMPROVE',
+      '',
+      ' SUGGESTED OPTIMIZATIONS:',
+      '',
+      ' HIGH IMPACT:',
+      ' 1. Convert repeated heavy computations',
+      '    → Use remember with key:',
+      '    "val result = remember(key) { heavyComputation() }"',
+      '',
+      ' 2. Implement pagination for Lists:',
+      '    → Use Paging 3 instead of loading all:',
+      '    "Pager(PagingConfig(pageSize = 20))"',
+      '',
+      ' MEDIUM IMPACT:',
+      ' 3. Use derivedStateOf:',
+      '    → "val state by produceState { ... }"',
+      '    → "val derived by derivedStateOf { state.count > 0 }"',
+      '',
+      ' 4. Implement StateFlow instead of LiveData:',
+      '    → "MutableStateFlow(initialValue).asStateFlow()"',
+      '',
+      ' ESTIMATED GAIN: 35% performance improvement',
+      ' EFFORT: 1 day to implement',
+      '',
+    ];
+  },
+  // Network Commands
+  {
+    name: 'github',
+    description: 'Open GitHub profile',
+    usage: 'github',
+    execute: (_args, ctx) => {
+      ctx.print('Opening GitHub profile...');
+      setTimeout(() => {
+        window.open('https://github.com/Dev-moe-kyawaung', '_blank');
+      }, 1000);
+      return ['🌐 Redirecting to GitHub...'];
+    },
+  },
+  {
+    name: 'linkedin',
+    description: 'Open LinkedIn profile',
+    usage: 'linkedin',
+    execute: (_args, ctx) => {
+      ctx.print('Opening LinkedIn profile...');
+      setTimeout(() => {
+        window.open('https://www.linkedin.com/in/moe-kyaw-aung-2653093a1', '_blank');
+      }, 1000);
+      return ['🌐 Redirecting to LinkedIn...'];
+    },
+  },
+  {
+    name: 'email',
+    description: 'Display contact email',
+    usage: 'email',
+    execute: () => [
+      'CONTACT EMAILS:',
+      '',
+      ' PRIMARY:',
+      '   moekyawaung@programmer.net',
+      '',
+      ' SECONDARY:',
+      '   moekyawaung@technologist.com',
+      '   moekyawaung@engineer.com',
+      '',
+      ' Use "mailto:moekyawaung@programmer.net" for instant contact.',
+    ];
   },
 ];
 
-export default function QuantumTerminal({ isOpen, onClose }: TerminalProps) {
+// ============================================================
+// QUANTUM TERMINAL COMPONENT
+// ============================================================
+
+interface QuantumTerminalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function QuantumTerminal({ isOpen, onClose }: QuantumTerminalProps) {
   const [input, setInput] = useState('');
   const [output, setOutput] = useState<string[]>([
-    '░▒▓ UNIX QUANTUM TERMINAL 4.0.0▓▒░',
-    'Copyright (c) 2024 Moe Kyaw Aung Industries',
-    'Type "help" to see available commands',
-    'Type "exit" to close terminal',
+    '░▒▓ QUANTUM TERMINAL v4.0.0▓▒░',
     '────────────────────────────────────────',
+    'Welcome to the Quantum Engineering Terminal.',
+    'Type "help" to see available commands.',
+    'Type "exit" to close terminal.',
+    '────────────────────────────────────────',
+    '',
   ]);
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [matrixMode, setMatrixMode] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
 
+  // Context for commands
+  const ctx: TerminalContext = {
+    print: (text) => {
+      setOutput((prev) => [...prev, text]);
+    },
+    clear: () => {
+      setOutput([]);
+    },
+    close: onClose,
+    setMatrixMode: (enabled) => setMatrixMode(enabled),
+    getHistory: () => history,
+    setInput: (value) => setInput(value),
+  };
+
+  // Auto-focus input when terminal opens
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus();
     }
   }, [isOpen]);
 
+  // Scroll to bottom on output change
   useEffect(() => {
     if (outputRef.current) {
       outputRef.current.scrollTop = outputRef.current.scrollHeight;
     }
-  }, [output]);
+  }, [output, isTyping]);
 
-  const executeCommand = (cmd: string) => {
-    const lowerCmd = cmd.toLowerCase().trim();
-    let newOutput: string[] = [`\$ \${cmd}`];
+  // Matrix rain effect
+  useEffect(() => {
+    if (!matrixMode || !outputRef.current) return;
 
-    if (lowerCmd === 'clear') {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.pointerEvents = 'none';
+    canvas.style.opacity = '0.3';
+    outputRef.current.style.position = 'relative';
+    outputRef.current.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const columns = canvas.width / 20;
+    const drops: number[] = new Array(Math.floor(columns)).fill(1);
+    const chars = 'アイウエオカキクケコサシスセソタチツテトABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+    let animationFrame: number;
+
+    const draw = () => {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.font = '15px monospace';
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars.charAt(Math.floor(Math.random() * chars.length));
+        ctx.fillStyle = `hsl(${Math.random() * 60 + 90}, 100%, ${Math.random() * 50 + 40}%)`;
+        ctx.fillText(text, i * 20, drops[i] * 20);
+
+        if (drops[i] * 20 > canvas.height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+
+      animationFrame = requestAnimationFrame(draw);
+    };
+
+    draw();
+
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      if (outputRef.current && canvas.parentNode === outputRef.current) {
+        outputRef.current.removeChild(canvas);
+      }
+    };
+  }, [matrixMode]);
+
+  // Execute command
+  const executeCommand = (cmdInput: string) => {
+    const trimmed = cmdInput.trim();
+    if (!trimmed) return;
+
+    // Add to history
+    setHistory((prev) => [...prev, trimmed]);
+    setHistoryIndex(-1);
+
+    // Clear command
+    if (trimmed.toLowerCase() === 'clear') {
       setOutput([]);
-      setHistory((prev) => [...prev, cmd]);
       setInput('');
       return;
     }
 
-    if (lowerCmd === 'exit') {
+    // Exit command
+    if (trimmed.toLowerCase() === 'exit') {
       onClose();
+      setInput('');
       return;
     }
 
-    const command = commands.find((c) => c.name === lowerCmd);
+    // Parse command and args
+    const parts = trimmed.split(/\s+/);
+    const cmdName = parts[0].toLowerCase();
+    const args = parts.slice(1);
+
+    // Find command
+    const command = commands.find((c) => c.name === cmdName);
+
+    // Show typed command
+    let newOutput: string[] = [`$ ${trimmed}`];
 
     if (command) {
-      newOutput = [...newOutput, ...command.execute()];
-      if (command.ai) {
-        // Simulate AI thinking
-        newOutput = [...newOutput, '🤖 AI ENGINE PROCESSING...'];
-        setTimeout(() => {
-          setOutput((prev) => [...prev, '\$ AI: Neural network is now pathfinding optimal response...']);
-        }, 1000);
+      try {
+        const result = command.execute(args, ctx);
+        newOutput = [...newOutput, ...result];
+      } catch (error) {
+        newOutput = [...newOutput, `⚠ Error executing command: ${error}`];
       }
-    } else if (lowerCmd.startsWith('ai:query')) {
-      const query = cmd.slice(8).trim();
-      newOutput = [
-        ...newOutput,
-        '🤖 Neural Engine activated...',
-        '',
-        `Analyzing query: "\${query}"`,
-        '',
-        'Based on analysis: The optimal architectural pattern for this requirement would be...',
-        'Adopting a composable microservices approach with event-driven communication.',
-        '',
-        'Recommended stack: Kotlin + Clean Architecture + Ktor/Spring Boot + PostgreSQL',
-        'Expected performance: 99.9% uptime with <50ms response time',
-      ];
-    } else if (lowerCmd.startsWith('ai:')) {
-      newOutput = [...newOutput, '🤖 AI processing: ' + cmd.slice(3)];
-    } else if (lowerCmd === 'neofetch') {
-      newOutput = [
-        ...newOutput,
-        '        ▄▄▄▄▄▄▄▄▄▄▄  Moe@engineer',
-        '      ▄█████████████▄  -----------',
-        '     ▄████████████████▄  OS: QuantumOS',
-        '    ▄███████████████████▄  Host: Moe-Kyaw-Aung-Pro',
-        '   ██████████████████████  Kernel: 4.0.0-ultimate',
-        '   ██████████████████████  Uptime: 82% uptime since 2020',
-        '   ██████████████████████  Shell: Quantum Shell 4.0',
-        '   ██████████████████████  Resolution: Infinite',
-        '   ██████████████████████  DE: Compose Desktop',
-        '    ▀██████████████████▀  Theme: Quantum Dark',
-        '     ▀████████████████▀  Icons: Blueprint',
-        '       ▀████████████▀    Terminal: QuantumTerm',
-        '          ▀██████▀       CPU: Kotlin Compiler',
-        '            ▀▀▀▀        GPU: Compose Renderer',
-      ];
-    } else if (lowerCmd === 'performance') {
-      newOutput = [
-        ...newOutput,
-        '⚡ Performance Metrics Report:',
-        '',
-        '  App Startup Time: 0.42s (optimized with Baseline Profiles)',
-        '  Frame Rate: 60 FPS stable (Compose Performance Mode)',
-        '  APK Size: 8.2 MB (minified with R8/ProGuard)',
-        '  Cache Hit Rate: 94% (efficient caching strategy)',
-        '  Build Time: 12.4s (parallel Gradle build)',
-        '  Test Success Rate: 99.9% (comprehensive test suite)',
-        '  Crash Rate: <0.1% (Catastrophic-free releases)',
-        '',
-        '╠══ All performance targets exceeded ══╣',
-      ];
-    } else if (lowerCmd === 'architecture') {
-      newOutput = [
-        ...newOutput,
-        '🏗️ System Architecture Blueprint:',
-        '',
-        '┌─────────────────────────────┐',
-        '│      PRESENTATION LAYER     │',
-        '│   Compose UI · Screens     │',
-        '└──────────┬──────────────────┘',
-        '           │  observe()',
-        '┌──────────▼──────────────────┐',
-        '│      VIEWMODEL LAYER       │',
-        '│  State · Events · Data      │',
-        '└──────────┬──────────────────┘',
-        '           │  execute()',
-        '┌──────────▼──────────────────┐',
-        '│       DOMAIN LAYER         │',
-        '│  Use Cases · Logic · Rules  │',
-        '└──────────┬──────────────────┘',
-        '           │  getData()',
-        '┌──────────▼──────────────────┐',
-        '│       DATA LAYER           │',
-        '│  Repository · Data sources │',
-        '└─────────────────────────────┘',
-        '',
-        'Pattern: Clean Architecture + MVVM',
-        'Modules: 18 feature modules + 3 core modules',
-      ];
+    } else if (cmdName === 'help') {
+      // Default help
+      const helpCommand = commands.find((c) => c.name === 'help');
+      if (helpCommand) {
+        newOutput = [...newOutput, ...helpCommand.execute([], ctx)];
+      }
     } else {
-      newOutput = [...newOutput, `Command not found: \${cmd}`, 'Type "help" to see available commands'];
+      newOutput = [...newOutput, `Command not found: ${cmdName}`, 'Type "help" to see available commands.'];
     }
 
     setOutput((prev) => [...prev, ...newOutput]);
-    setHistory((prev) => [...prev, cmd]);
-    setHistoryIndex(-1);
     setInput('');
   };
 
+  // Handle keyboard events
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
+      setIsTyping(true);
+      setTimeout(() => setIsTyping(false), 500);
       executeCommand(input);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
+      if (history.length === 0) return;
       const idx = historyIndex === -1 ? history.length - 1 : Math.max(0, historyIndex - 1);
-      if (history[idx]) {
-        setHistoryIndex(idx);
-        setInput(history[idx]);
-      }
+      setHistoryIndex(idx);
+      setInput(history[idx] || '');
     } else if (e.key === 'ArrowDown') {
       e.preventDefault();
+      if (history.length === 0) return;
       const idx = historyIndex === -1 ? -1 : Math.min(history.length - 1, historyIndex + 1);
-      if (idx === -1) {
-        setInput('');
-      } else {
-        setInput(history[idx] || '');
-      }
       setHistoryIndex(idx);
+      setInput(idx === -1 ? '' : history[idx] || '');
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      // Command completion
+      const currentInput = input.toLowerCase();
+      const matchingCommands = commands.filter((c) => c.name.startsWith(currentInput));
+      if (matchingCommands.length === 1) {
+        setInput(matchingCommands[0].name + ' ');
+      } else if (matchingCommands.length > 1) {
+        setOutput((prev) => [...prev, 'Matching commands:', ...matchingCommands.map((c) => `  ${c.name}`)]);
+      }
     }
   };
 
+  // Render terminal
   return (
     <AnimatePresence>
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9 }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           className="fixed inset-0 z-[100] flex items-center justify-center"
         >
-          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-0" onClick={onClose} />
+          {/* Background Overlay */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-xl z-0"
+            onClick={onClose}
+          />
 
+          {/* Terminal Window */}
           <motion.div
-            initial={{ scale: 0.7, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.7, opacity: 0 }}
-            transition={{ duration: 0.3 }}
-            className="relative z-10 w-full max-w-4xl h-[550px] terminal-projection"
+            initial={{ scale: 0.9, y: 30, opacity: 0 }}
+            animate={{ scale: 1, y: 0, opacity: 1 }}
+            exit={{ scale: 0.9, y: 30, opacity: 0 }}
+            transition={{
+              type: 'spring',
+              stiffness: 260,
+              damping: 20,
+            }}
+            className="relative z-10 w-full max-w-4xl h-3/4 max-h-[650px] flex flex-col rounded-xl overflow-hidden"
             style={{
               background: matrixMode
-                ? 'rgba(0, 10, 0, 0.95)'
-                : 'rgba(10, 14, 26, 0.97)',
-              borderColor: matrixMode ? 'rgba(0, 255, 0, 0.3)' : 'rgba(0, 255, 157, 0.2)',
+                ? 'rgba(0, 10, 0, 0.97)'
+                : 'rgba(8, 12, 24, 0.97)',
+              border: matrixMode
+                ? '1px solid rgba(0, 255, 0, 0.3)'
+                : '1px solid rgba(0, 229, 255, 0.3)',
+              boxShadow: matrixMode
+                ? '0 0 40px rgba(0, 255, 0, 0.2)'
+                : '0 0 40px rgba(0, 229, 255, 0.2)',
             }}
           >
             {/* Terminal Header */}
-            <div className="flex items-center justify-between px-4 py-2 border-b border-opacity-20"
-              style={{ borderColor: matrixMode ? 'rgba(0,255,0,0.2)' : 'rgba(0,255,157,0.1)' }}
+            <div
+              className="flex items-center justify-between px-4 py-2.5 border-b border-opacity-20"
+              style={{
+                background: matrixMode
+                  ? 'rgba(0, 30, 0, 0.5)'
+                  : 'rgba(0, 229, 255, 0.05)',
+                borderColor: matrixMode
+                  ? 'rgba(0, 255, 0, 0.2)'
+                  : 'rgba(0, 229, 255, 0.1)',
+              }}
             >
+              {/* Window Controls */}
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
+                <div className="w-3 h-3 rounded-full bg-[#FF5F56]" onClick={onClose} />
                 <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
                 <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
               </div>
-              <div className="flex items-center gap-2 text-xs font-mono"
-                style={{ color: matrixMode ? '#00FF00' : '#00FF9D' }}
-              >
-                <Command size={12} />
-                engineer@quantum:~
-              </div>
-              <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
-                <X size={16} />
-              </button>
-            </div>
 
-            {/* Matrix Mode Visual */}
-            {matrixMode && (
-              <style jsx global>{`
-                @keyframes matrixRain {
-                  0% { background-position: 0 0; }
-                  100% { background-position: 0 1000px; }
-                }
-              `}</style>
-            )}
+              {/* Terminal Title */}
+              <div className="flex items-center gap-2 text-xs font-mono"
+                style={{ color: matrixMode ? '#00FF00' : '#00E5FF' }}
+              >
+                <TerminalIcon size={12} />
+                {matrixMode ? 'MATRIX TERMINAL' : 'QUANTUM TERMINAL v4.0'}
+                {matrixMode && ' — WAKE UP, NEO...'}
+              </div>
+
+              {/* System Status */}
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-pulse" />
+                <span className="text-[10px] font-mono" style={{ color: matrixMode ? '#00FF00' : '#00E5FF' }}>
+                  ONLINE
+                </span>
+                <button onClick={onClose} className="p-1 hover:opacity-70 transition-opacity"
+                  style={{ color: matrixMode ? '#00FF00' : '#00E5FF' }}
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            </div>
 
             {/* Terminal Output */}
             <div
               ref={outputRef}
-              className="flex-1 overflow-y-auto p-4 font-mono text-xs space-y-0.5"
+              className="flex-1 overflow-y-auto p-4 font-mono text-[12px] leading-relaxed"
               style={{
                 color: matrixMode ? '#00FF00' : '#00FF9D',
-                backgroundImage: matrixMode
-                  ? 'repeating-linear-gradient(0deg,
-
-
-I will now complete the **ABSOLUTE ULTIMATE EDITION** with the remaining core components, the full README and deployment configuration, and finish all the necessary files to make this a complete, production-ready futuristic engineering portfolio.
-
----
-
-## COMPLETING THE ABSOLUTE ULTIMATE EDITION
-
-### File 9: `ultimate/components/future/AbsoluteUltimateHero.tsx`
-
-```tsx
-'use client';
-
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { useRef, useEffect, useState } from 'react';
-import { Sparkles, Terminal, Cpu, Code2, Shield, Zap, Download, ExternalLink, Github, Linkedin, Mail } from 'lucide-react';
-
-export default function AbsoluteUltimateHero() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-
-  // Advanced Mouse Tracking with Spring Physics
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const springX = useSpring(mouseX, { stiffness: 100, damping: 30 });
-  const springY = useSpring(mouseY, { stiffness: 100, damping: 30 });
-
-  // Parallax Layers
-  const rotateX = useTransform(springY, [-0.5, 0.5], [15, -15]);
-  const rotateY = useTransform(springX, [-0.5, 0.5], [-15, 15]);
-  const glowX = useTransform(springX, [-0.5, 0.5], ['30%', '70%']);
-  const glowY = useTransform(springY, [-0.5, 0.5], ['30%', '70%']);
-
-  // Scroll Progress
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const totalScroll = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = (window.scrollY / totalScroll) * 100;
-      setScrollProgress(progress);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const normalizedX = (e.clientX / window.innerWidth - 0.5) * 2;
-      const normalizedY = (e.clientY / window.innerHeight - 0.5) * 2;
-      mouseX.set(normalizedX);
-      mouseY.set(normalizedY);
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
-  }, [mouseX, mouseY]);
-
-  const holographicSkills = [
-    'KOTLIN', 'JETPACK COMPOSE', 'CLEAN ARCH', 'MVVM', 'MVI',
-    'COROUTINES', 'FLOW', 'FIREBASE', 'TFLITE', 'KMP',
-    'GIT', 'CI/CD', 'DOCKER', 'LINUX', 'FIGMA',
-  ];
-
-  return (
-    <section
-      id="home"
-      ref={containerRef}
-      className="relative min-h-screen flex items-center justify-center overflow-hidden"
-      style={{ perspective: 1000 }}
-    >
-      {/* Scroll Progress Indicator */}
-      <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-transparent">
-        <motion.div
-          className="h-full bg-gradient-to-r from-[#00E5FF] to-[#FF6B35]"
-          style={{ width: `\${scrollProgress}%` }}
-          initial={{ width: 0 }}
-        />
-      </div>
-
-      {/* Mouse Reactive Glow */}
-      <motion.div
-        className="pointer-events-none fixed w-96 h-96 rounded-full z-0"
-        style={{
-          background: `radial-gradient(circle at center, rgba(0,229,255,0.1) 0%, transparent 70%)`,
-          left: glowX,
-          top: glowY,
-          transform: 'translate(-50%, -50%)',
-        }}
-      />
-
-      {/* 3D Tilt Content */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1, ease: 'easeOut' }}
-        style={{
-          rotateX,
-          rotateY,
-          transformStyle: 'preserve-3d',
-        }}
-        className="relative z-10 text-center px-4 max-w-7xl mx-auto"
-      >
-        {/* Status Badge */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="inline-flex items-center gap-3 px-4 py-2 quantum-card rounded-full mb-8"
-          style={{ transform: 'translateZ(50px)' }}
-        >
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2ECC71] opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-[#2ECC71]"></span>
-          </span>
-          <span className="text-xs font-mono text-[#00E5FF] tracking-wider uppercase">
-            △ System Online — Quantum Ready
-          </span>
-          <span className="text-[10px] font-mono text-gray-500 hidden sm:inline">
-            v4.0.0
-          </span>
-        </motion.div>
-
-        {/* Holo Title */}
-        <motion.h1
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.3 }}
-          className="text-5xl sm:text-7xl md:text-8xl lg:text-9xl font-black font-display leading-none mb-4"
-          style={{ transform: 'translateZ(80px)' }}
-        >
-          <motion.span
-            animate={{ y: [0, -10, 0] }}
-            transition={{ repeat: Infinity, duration: 3 }}
-            className="inline-block holographic"
-          >
-            MOE
-          </motion.span>{' '}
-          <motion.span
-            animate={{ y: [0, 10, 0] }}
-            transition={{ repeat: Infinity, duration: 4 }}
-            className="inline-block text-white"
-          >
-            KYAW
-          </motion.span>{' '}
-          <motion.span
-            animate={{ y: [0, -5, 0] }}
-            transition={{ repeat: Infinity, duration: 3.5 }}
-            className="inline-block bg-gradient-to-r from-[#00E5FF] to-[#FF6B35] bg-clip-text text-transparent"
-          >
-            AUNG
-          </motion.span>
-        </motion.h1>
-
-        {/* Role Display */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="mb-8"
-          style={{ transform: 'translateZ(60px)' }}
-        >
-          <div className="text-lg md:text-2xl font-mono text-[#00E5FF]/80">
-            <span className="text-white/40">&lt;</span>
-            <span className="holographic font-semibold">SENIOR_ANDROID_ENGINEER</span>
-            <span className="text-white/40">/&gt;</span>
-          </div>
-          <div className="mt-2 text-sm md:text-base font-mono text-gray-500">
-            <span className="text-[#FF6B35]">fn</span> getTechStack() {'{'}
-            <span className="text-white"> return [</span>
-            {holographicSkills.slice(0, 3).map((skill, i) => (
-              <span key={skill} className="text-[#00E5FF]">
-                "{skill}"{i < 2 && ','}
-              </span>
-            ))}
-            <span className="text-white">]</span> {'}'}
-          </div>
-        </motion.div>
-
-        {/* Holographic Skills Cloud */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.8 }}
-          className="flex flex-wrap gap-2 justify-center mb-12"
-          style={{ transform: 'translateZ(40px)' }}
-        >
-          {holographicSkills.map((skill, index) => (
-            <motion.span
-              key={skill}
-              animate={{
-                y: [0, Math.sin(index * 0.5) * 5, 0],
-                scale: [1, 1.05, 1],
+                background: 'transparent',
+                scrollbarWidth: 'thin',
+                scrollbarColor: matrixMode ? '#00FF00' : '#00E5FF',
               }}
-              transition={{
-                repeat: Infinity,
-                duration: 3 + index * 0.3,
-                delay: index * 0.1,
-              }}
-              className="px-3 py-2 quantum-card rounded-full text-xs font-mono
-                         hover:bg-[#00E5FF]/10 hover:border-[#00E5FF]/50 transition-all
-                         cursor-default"
             >
-              <span className="text-[#00E5FF]">◈</span> {skill}
-            </motion.span>
-          ))}
-        </motion.div>
+              {output.map((line, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.1, delay: 0.05 }}
+                  className="whitespace-pre-wrap"
+                >
+                  {line}
+                </motion.div>
+              ))}
 
-        {/* Holographic Terminal Window */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1 }}
-          className="max-w-xl mx-auto mb-12 text-left"
-          style={{ transform: 'translateZ(30px)' }}
-        >
-          <div className="terminal-projection">
-            {/* Terminal Header with macOS dots */}
-            <div className="flex items-center gap-2 px-4 py-2 border-b border-[#00FF9D]/20">
-              <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
-              <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
-              <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
-              <span className="ml-2 text-xs font-mono text-[#00FF9D]">engineer@quantum:~/portfolio</span>
-              <span className="ml-auto text-xs font-mono text-gray-600">bash</span>
+              {isTyping && (
+                <div className="flex items-center gap-1">
+                  <span className="inline-block w-2 h-4 bg-current animate-pulse" />
+                </div>
+              )}
             </div>
-            {/* Terminal Content */}
-            <div className="p-4 text-xs font-mono text-[#00FF9D] space-y-1">
-              <div className="flex gap-2">
-                <span className="text-[#FFD700]">\$</span>
-                <span>whoami</span>
+
+            {/* Terminal Input */}
+            <div
+              className="px-4 py-3 border-t border-opacity-20"
+              style={{
+                background: matrixMode
+                  ? 'rgba(0, 20, 0, 0.5)'
+                  : 'rgba(0, 0, 0, 0.3)',
+                borderColor: matrixMode
+                  ? 'rgba(0, 255, 0, 0.1)'
+                  : 'rgba(0, 229, 255, 0.1)',
+              }}
+            >
+              {/* Quick Command Buttons */}
+              <div className="flex items-center gap-1 mb-2 overflow-x-auto pb-1"
+                style={{ scrollbarWidth: 'none' }}
+              >
+                {['help', 'skills', 'projects', 'dna', 'ai', 'neofetch', 'architecture', 'performance'].map((cmd) => (
+                  <button
+                    key={cmd}
+                    onClick={() => {
+                      setInput(cmd);
+                      executeCommand(cmd);
+                    }}
+                    className="px-2 py-0.5 text-[10px] font-mono rounded transition-all"
+                    style={{
+                      background: matrixMode ? 'rgba(0, 255, 0, 0.1)' : 'rgba(0, 229, 255, 0.1)',
+                      color: matrixMode ? '#00FF00' : '#00E5FF',
+                      border: `1px solid ${matrixMode ? 'rgba(0,255,0,0.2)' : 'rgba(0,229,255,0.2)'}`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = matrixMode ? 'rgba(0,255,0,0.2)' : 'rgba(0,229,255,0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = matrixMode ? 'rgba(0,255,0,0.1)' : 'rgba(0,229,255,0.1)';
+                    }}
+                  >
+                    {cmd}
+                  </button>
+                ))}
               </div>
-              <div className="text-[#00FF9D]">senior-android-engineer</div>
-              <div className="flex gap-2 mt-2">
-                <span className="text-[#FFD700]">\$</span>
-                <span>cat technical-skills.txt | grep "senior"</span>
+
+              {/* Input Line */}
+              <div className="flex items-center gap-2">
+                {/* Prompt Symbol */}
+                <span className="text-sm font-mono" style={{ color: matrixMode ? '#00FF00' : '#FF6B35' }}>
+                  $
+                </span>
+
+                {/* Input Field */}
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  className="flex-1 bg-transparent outline-none text-sm font-mono"
+                  style={{
+                    color: matrixMode ? '#00FF00' : '#00E5FF',
+                    caretColor: matrixMode ? '#00FF00' : '#00E5FF',
+                  }}
+                  placeholder="Type 'help' for available commands..."
+                  spellCheck={false}
+                  autoComplete="off"
+                  autoCorrect="off"
+                />
+
+                {/* Matrix Mode Toggle */}
+                <button
+                  onClick={() => setMatrixMode(!matrixMode)}
+                  className="px-2 py-1 text-[10px] font-mono rounded transition-all"
+                  style={{
+                    background: matrixMode ? 'rgba(0,255,0,0.1)' : 'rgba(0,229,255,0.1)',
+                    color: matrixMode ? '#00FF00' : '#00E5FF',
+                    border: `1px solid ${matrixMode ? 'rgba(0,255,0,0.3)' : 'rgba(0,229,255,0.3)'}`,
+                  }}
+                  title="Toggle Matrix Mode"
+                >
+                  {matrixMode ? 'MATRIX: ON' : 'MATRIX: OFF'}
+                </button>
               </div>
-              <div className="text-[#00FF9D]">✓ Kotlin expert level: 95%</div>
-              <div className="text-[#00FF9D]">✓ Clean Architecture: 98%</div>
-              <div className="text-[#00FF9D]">✓ Jetpack Compose: 94%</div>
-              <div className="text-[#00FF9D]">✓ ML Integration: 92%</div>
-              <div className="flex gap-2 mt-2">
-                <span className="text-[#FFD700]">\$</span>
-                <span>system status --check</span>
-              </div>
-              <div className="text-[#2ECC71]">✓ All systems operational</div>
-              <div className="text-[#2ECC71]">✓ Ready for new challenges</div>
-              <div className="flex gap-2 mt-2">
-                <span className="text-[#FFD700]">\$</span>
-                <span className="animate-pulse">▊</span>
+
+              {/* Terminal Footer */}
+              <div className="flex items-center justify-between text-[9px] font-mono mt-2"
+                style={{ color: matrixMode ? 'rgba(0,255,0,0.5)' : 'rgba(0,229,255,0.35)' }}
+              >
+                <div className="flex items-center gap-2">
+                  <span>USE ↑↓ FOR HISTORY</span>
+                  <span>·</span>
+                  <span>TAB FOR COMPLETION</span>
+                </div>
+                <div>QUANTUM TERMINAL © 2024</div>
               </div>
             </div>
-          </div>
+          </motion.div>
         </motion.div>
-
-        {/* Action Buttons with Holographic Effects */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center mb-12"
-          style={{ transform: 'translateZ(50px)' }}
-        >
-          <motion.a
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            href="#projects"
-            className="group relative flex items-center justify-center gap-2 px-8 py-4 rounded-xl
-                       bg-gradient-to-r from-[#00E5FF] to-[#FF6B35] text-white font-mono text-sm
-                       shadow-xl hover:shadow-2xl transition-all overflow-hidden"
-          >
-            <span className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Sparkles size={16} className="group-hover:animate-spin" />
-            INITIATE_VIEW_PROTOCOL
-          </motion.a>
-          <motion.a
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            href="#contact"
-            className="group flex items-center gap-2 px-8 py-4 rounded-xl quantum-card
-                       text-white font-mono text-sm hover:border-[#00E5FF]/50 transition-all"
-          >
-            <Terminal size={14} className="text-[#00E5FF]" />
-            ENGAGE_AI
-          </motion.a>
-          <motion.a
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            href="/resume.pdf"
-            download
-            className="group flex items-center gap-2 px-8 py-4 rounded-xl border border-white/10
-                       hover:border-[#FF6B35]/50 transition-all font-mono text-sm"
-          >
-            <Download size={14} className="text-[#FF6B35]" />
-            DOWNLOAD
-          </motion.a>
-        </motion.div>
-
-        {/* Social Icons with Magnetic Effect */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.4 }}
-          className="flex items-center justify-center gap-4 pb-8"
-          style={{ transform: 'translateZ(20px)' }}
-        >
-          {[
-            { icon: Github, href: '#', label: 'GitHub' },
-            { icon: Linkedin, href: '#', label: 'LinkedIn' },
-            { icon: Mail, href: '#', label: 'Email' },
-          ].map(({ icon: Icon, href, label }) => (
-            <motion.a
-              key={label}
-              href={href}
-              whileHover={{ scale: 1.2, rotate: 5 }}
-              whileTap={{ scale: 0.9 }}
-              className="group relative w-12 h-12 quantum-card rounded-xl flex items-center justify-center
-                         hover:border-[#00E5FF]/50 transition-all"
-            >
-              <Icon size={20} className="text-[#00E5FF] group-hover:text-[#FF6B35] transition-colors" />
-              <span className="absolute -bottom-6 text-[8px] font-mono text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                {label}
-              </span>
-            </motion.a>
-          ))}
-        </motion.div>
-      </motion.div>
-
-      {/* Background Holographic Elements */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {/* Particle fields */}
-        {Array.from({ length: 20 }).map((_, index) => (
-          <motion.div
-            key={index}
-            className="quantum-particle"
-            animate={{
-              x: [Math.random() * 100, Math.random() * 100 + 50, Math.random() * 100],
-              y: [Math.random() * 100, Math.random() * 100 - 30, Math.random() * 100],
-              opacity: [0, 0.5, 0],
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: 10 + Math.random() * 10,
-              delay: Math.random() * 5,
-            }}
-            style={{
-              left: `\${Math.random() * 100}%`,
-              top: `\${Math.random() * 100}%`,
-            }}
-          />
-        ))}
-
-        {/* Holographic Lines */}
-        <svg className="absolute inset-0 w-full h-full opacity-5">
-          {Array.from({ length: 10 }).map((_, index) => (
-            <motion.line
-              key={index}
-              x1={Math.random() * 100}
-              y1={Math.random() * 100}
-              x2={Math.random() * 100}
-              y2={Math.random() * 100}
-              stroke={index % 2 === 0 ? '#00E5FF' : '#FF6B35'}
-              strokeWidth="0.5"
-              animate={{ opacity: [0.2, 1, 0.2] }}
-              transition={{ repeat: Infinity, duration: 3, delay: index * 0.3 }}
-            />
-          ))}
-        </svg>
-      </div>
-
-      {/* Scroll Indicator */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.5 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2"
-      >
-        <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
-          <div className="text-[10px] font-mono text-[#00E5FF]/60 uppercase tracking-wider text-center mb-2">
-            ▼ Scroll to Enter Universe ▼
-          </div>
-          <Cpu size={16} className="mx-auto text-[#00E5FF]/60" />
-        </motion.div>
-      </motion.div>
-    </section>
+      )}
+    </AnimatePresence>
   );
 }
